@@ -1,0 +1,54 @@
+{
+    "swagger": "2.0",
+    "info": {
+        "description": "REST API for the Ubuntu GPU VM lifecycle on CB-Tumblebug.",
+        "title": "GPU VM API",
+        "contact": {},
+        "license": {
+            "name": "Apache 2.0",
+            "url": "http://www.apache.org/licenses/LICENSE-2.0.html"
+        },
+        "version": "0.1.0"
+    },
+    "basePath": "/gpuvm",
+    "paths": {
+        "/readyz": {
+            "get": {
+                "description": "Report whether the service finished initialization and can accept traffic",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "[Health] Service Health"
+                ],
+                "summary": "Check service readiness",
+                "operationId": "GetReadyz",
+                "responses": {
+                    "200": {
+                        "description": "Service is ready",
+                        "schema": {
+                            "$ref": "#/definitions/model.SimpleMsg"
+                        }
+                    },
+                    "503": {
+                        "description": "Service is still initializing",
+                        "schema": {
+                            "$ref": "#/definitions/model.SimpleMsg"
+                        }
+                    }
+                }
+            }
+        }
+    },
+    "definitions": {
+        "model.SimpleMsg": {
+            "type": "object",
+            "properties": {
+                "message": {
+                    "type": "string",
+                    "example": "Infra not found"
+                }
+            }
+        }
+    }
+}

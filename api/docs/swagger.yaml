@@ -1,0 +1,37 @@
+basePath: /gpuvm
+definitions:
+  model.SimpleMsg:
+    properties:
+      message:
+        example: Infra not found
+        type: string
+    type: object
+info:
+  contact: {}
+  description: REST API for the Ubuntu GPU VM lifecycle on CB-Tumblebug.
+  license:
+    name: Apache 2.0
+    url: http://www.apache.org/licenses/LICENSE-2.0.html
+  title: GPU VM API
+  version: 0.1.0
+paths:
+  /readyz:
+    get:
+      description: Report whether the service finished initialization and can accept
+        traffic
+      operationId: GetReadyz
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Service is ready
+          schema:
+            $ref: '#/definitions/model.SimpleMsg'
+        "503":
+          description: Service is still initializing
+          schema:
+            $ref: '#/definitions/model.SimpleMsg'
+      summary: Check service readiness
+      tags:
+      - '[Health] Service Health'
+swagger: "2.0"
