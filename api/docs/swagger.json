@@ -12,7 +12,158 @@
     },
     "basePath": "/gpuvm",
     "paths": {
+        "/ns/{nsId}/infra": {
+            "get": {
+                "description": "List every Infra of the namespace with its node status",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "[Infra] GPU VM Lifecycle"
+                ],
+                "summary": "List GPU Infras",
+                "operationId": "GetAllInfra",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "default": "default",
+                        "description": "Namespace ID",
+                        "name": "nsId",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Infra list",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/tumblebug.InfraInfo"
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Infra lookup failed",
+                        "schema": {
+                            "$ref": "#/definitions/model.SimpleMsg"
+                        }
+                    }
+                }
+            },
+            "post": {
+                "description": "Provision an Ubuntu GPU VM from the configured template. The request is validated first and blocks until provisioning finishes, which takes several minutes",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "[Infra] GPU VM Lifecycle"
+                ],
+                "summary": "Create a GPU Infra",
+                "operationId": "PostInfra",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "default": "default",
+                        "description": "Namespace ID",
+                        "name": "nsId",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Infra creation request",
+                        "name": "infraReq",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/model.CreateInfraReq"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Infra created",
+                        "schema": {
+                            "$ref": "#/definitions/tumblebug.InfraInfo"
+                        }
+                    },
+                    "400": {
+                        "description": "Malformed request body",
+                        "schema": {
+                            "$ref": "#/definitions/model.SimpleMsg"
+                        }
+                    },
+                    "500": {
+                        "description": "Infra creation failed",
+                        "schema": {
+                            "$ref": "#/definitions/model.SimpleMsg"
+                        }
+                    }
+                }
+            }
+        },
         "/ns/{nsId}/infra/{infraId}": {
+            "get": {
+                "description": "Read one Infra. Use option=accessinfo for public IP, SSH port and private key",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "[Infra] GPU VM Lifecycle"
+                ],
+                "summary": "Get a GPU Infra",
+                "operationId": "GetInfra",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "default": "default",
+                        "description": "Namespace ID",
+                        "name": "nsId",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Infra ID",
+                        "name": "infraId",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "enum": [
+                            "status",
+                            "accessinfo"
+                        ],
+                        "type": "string",
+                        "description": "View to return",
+                        "name": "option",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Infra information",
+                        "schema": {
+                            "$ref": "#/definitions/tumblebug.InfraInfo"
+                        }
+                    },
+                    "404": {
+                        "description": "Infra not found",
+                        "schema": {
+                            "$ref": "#/definitions/model.SimpleMsg"
+                        }
+                    },
+                    "500": {
+                        "description": "Infra lookup failed",
+                        "schema": {
+                            "$ref": "#/definitions/model.SimpleMsg"
+                        }
+                    }
+                }
+            },
             "delete": {
                 "description": "Terminate every node of the Infra and remove its records. Shared resources are kept; release them separately once the namespace holds no Infra",
                 "produces": [
@@ -55,6 +206,124 @@
                     },
                     "500": {
                         "description": "Infra deletion failed",
+                        "schema": {
+                            "$ref": "#/definitions/model.SimpleMsg"
+                        }
+                    }
+                }
+            }
+        },
+        "/ns/{nsId}/infra/{infraId}/control": {
+            "post": {
+                "description": "Apply suspend, resume, reboot or terminate to every node. Terminate stops the nodes but keeps the records, so delete the Infra afterwards to stop billing",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "[Infra] GPU VM Lifecycle"
+                ],
+                "summary": "Control a GPU Infra",
+                "operationId": "PostInfraControl",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "default": "default",
+                        "description": "Namespace ID",
+                        "name": "nsId",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Infra ID",
+                        "name": "infraId",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Lifecycle action",
+                        "name": "controlReq",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/model.ControlInfraReq"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Action applied",
+                        "schema": {
+                            "$ref": "#/definitions/model.ControlInfraResp"
+                        }
+                    },
+                    "400": {
+                        "description": "Unsupported action",
+                        "schema": {
+                            "$ref": "#/definitions/model.SimpleMsg"
+                        }
+                    },
+                    "404": {
+                        "description": "Infra not found",
+                        "schema": {
+                            "$ref": "#/definitions/model.SimpleMsg"
+                        }
+                    },
+                    "500": {
+                        "description": "Infra control failed",
+                        "schema": {
+                            "$ref": "#/definitions/model.SimpleMsg"
+                        }
+                    }
+                }
+            }
+        },
+        "/ns/{nsId}/infra/{infraId}/gpu": {
+            "get": {
+                "description": "Run nvidia-smi on every node and return the reported GPU model, memory and driver version",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "[Infra] GPU VM Lifecycle"
+                ],
+                "summary": "Report GPUs of an Infra",
+                "operationId": "GetInfraGPU",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "default": "default",
+                        "description": "Namespace ID",
+                        "name": "nsId",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Infra ID",
+                        "name": "infraId",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "GPU report per node",
+                        "schema": {
+                            "$ref": "#/definitions/tumblebug.CommandResults"
+                        }
+                    },
+                    "404": {
+                        "description": "Infra not found",
+                        "schema": {
+                            "$ref": "#/definitions/model.SimpleMsg"
+                        }
+                    },
+                    "500": {
+                        "description": "GPU report failed",
                         "schema": {
                             "$ref": "#/definitions/model.SimpleMsg"
                         }
@@ -128,6 +397,49 @@
         }
     },
     "definitions": {
+        "model.ControlInfraReq": {
+            "type": "object",
+            "required": [
+                "action"
+            ],
+            "properties": {
+                "action": {
+                    "description": "Action is one of suspend, resume, reboot, terminate.",
+                    "type": "string",
+                    "enum": [
+                        "suspend",
+                        "resume",
+                        "reboot",
+                        "terminate"
+                    ],
+                    "example": "suspend"
+                }
+            }
+        },
+        "model.ControlInfraResp": {
+            "type": "object",
+            "properties": {
+                "affected": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                }
+            }
+        },
+        "model.CreateInfraReq": {
+            "type": "object",
+            "required": [
+                "name"
+            ],
+            "properties": {
+                "name": {
+                    "description": "Name becomes the Infra ID; node names get a -N suffix.",
+                    "type": "string",
+                    "example": "gpu-lab"
+                }
+            }
+        },
         "model.DeleteInfraResp": {
             "type": "object",
             "properties": {
@@ -167,6 +479,121 @@
                 "message": {
                     "type": "string",
                     "example": "Infra not found"
+                }
+            }
+        },
+        "tumblebug.CommandResult": {
+            "type": "object",
+            "properties": {
+                "command": {
+                    "type": "object",
+                    "additionalProperties": {
+                        "type": "string"
+                    }
+                },
+                "err": {
+                    "type": "string"
+                },
+                "nodeId": {
+                    "type": "string"
+                },
+                "stderr": {
+                    "type": "object",
+                    "additionalProperties": {
+                        "type": "string"
+                    }
+                },
+                "stdout": {
+                    "type": "object",
+                    "additionalProperties": {
+                        "type": "string"
+                    }
+                }
+            }
+        },
+        "tumblebug.CommandResults": {
+            "type": "object",
+            "properties": {
+                "results": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/tumblebug.CommandResult"
+                    }
+                }
+            }
+        },
+        "tumblebug.InfraInfo": {
+            "type": "object",
+            "properties": {
+                "description": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "name": {
+                    "type": "string"
+                },
+                "node": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/tumblebug.NodeInfo"
+                    }
+                },
+                "status": {
+                    "type": "string"
+                },
+                "statusCount": {
+                    "$ref": "#/definitions/tumblebug.StatusCountInfo"
+                },
+                "targetStatus": {
+                    "type": "string"
+                }
+            }
+        },
+        "tumblebug.NodeInfo": {
+            "type": "object",
+            "properties": {
+                "id": {
+                    "type": "string"
+                },
+                "imageId": {
+                    "type": "string"
+                },
+                "name": {
+                    "type": "string"
+                },
+                "nodeGroupId": {
+                    "type": "string"
+                },
+                "privateIP": {
+                    "type": "string"
+                },
+                "publicIP": {
+                    "type": "string"
+                },
+                "specId": {
+                    "type": "string"
+                },
+                "sshPort": {
+                    "type": "integer"
+                },
+                "status": {
+                    "type": "string"
+                }
+            }
+        },
+        "tumblebug.StatusCountInfo": {
+            "type": "object",
+            "properties": {
+                "countCreating": {
+                    "type": "integer"
+                },
+                "countRunning": {
+                    "type": "integer"
+                },
+                "countTotal": {
+                    "type": "integer"
                 }
             }
         }

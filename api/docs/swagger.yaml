@@ -1,5 +1,35 @@
 basePath: /gpuvm
 definitions:
+  model.ControlInfraReq:
+    properties:
+      action:
+        description: Action is one of suspend, resume, reboot, terminate.
+        enum:
+        - suspend
+        - resume
+        - reboot
+        - terminate
+        example: suspend
+        type: string
+    required:
+    - action
+    type: object
+  model.ControlInfraResp:
+    properties:
+      affected:
+        items:
+          type: string
+        type: array
+    type: object
+  model.CreateInfraReq:
+    properties:
+      name:
+        description: Name becomes the Infra ID; node names get a -N suffix.
+        example: gpu-lab
+        type: string
+    required:
+    - name
+    type: object
   model.DeleteInfraResp:
     properties:
       deleted:
@@ -27,6 +57,81 @@ definitions:
         example: Infra not found
         type: string
     type: object
+  tumblebug.CommandResult:
+    properties:
+      command:
+        additionalProperties:
+          type: string
+        type: object
+      err:
+        type: string
+      nodeId:
+        type: string
+      stderr:
+        additionalProperties:
+          type: string
+        type: object
+      stdout:
+        additionalProperties:
+          type: string
+        type: object
+    type: object
+  tumblebug.CommandResults:
+    properties:
+      results:
+        items:
+          $ref: '#/definitions/tumblebug.CommandResult'
+        type: array
+    type: object
+  tumblebug.InfraInfo:
+    properties:
+      description:
+        type: string
+      id:
+        type: string
+      name:
+        type: string
+      node:
+        items:
+          $ref: '#/definitions/tumblebug.NodeInfo'
+        type: array
+      status:
+        type: string
+      statusCount:
+        $ref: '#/definitions/tumblebug.StatusCountInfo'
+      targetStatus:
+        type: string
+    type: object
+  tumblebug.NodeInfo:
+    properties:
+      id:
+        type: string
+      imageId:
+        type: string
+      name:
+        type: string
+      nodeGroupId:
+        type: string
+      privateIP:
+        type: string
+      publicIP:
+        type: string
+      specId:
+        type: string
+      sshPort:
+        type: integer
+      status:
+        type: string
+    type: object
+  tumblebug.StatusCountInfo:
+    properties:
+      countCreating:
+        type: integer
+      countRunning:
+        type: integer
+      countTotal:
+        type: integer
+    type: object
 info:
   contact: {}
   description: REST API for the Ubuntu GPU VM lifecycle on CB-Tumblebug.
@@ -36,6 +141,71 @@ info:
   title: GPU VM API
   version: 0.1.0
 paths:
+  /ns/{nsId}/infra:
+    get:
+      description: List every Infra of the namespace with its node status
+      operationId: GetAllInfra
+      parameters:
+      - default: default
+        description: Namespace ID
+        in: path
+        name: nsId
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Infra list
+          schema:
+            items:
+              $ref: '#/definitions/tumblebug.InfraInfo'
+            type: array
+        "500":
+          description: Infra lookup failed
+          schema:
+            $ref: '#/definitions/model.SimpleMsg'
+      summary: List GPU Infras
+      tags:
+      - '[Infra] GPU VM Lifecycle'
+    post:
+      consumes:
+      - application/json
+      description: Provision an Ubuntu GPU VM from the configured template. The request
+        is validated first and blocks until provisioning finishes, which takes several
+        minutes
+      operationId: PostInfra
+      parameters:
+      - default: default
+        description: Namespace ID
+        in: path
+        name: nsId
+        required: true
+        type: string
+      - description: Infra creation request
+        in: body
+        name: infraReq
+        required: true
+        schema:
+          $ref: '#/definitions/model.CreateInfraReq'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Infra created
+          schema:
+            $ref: '#/definitions/tumblebug.InfraInfo'
+        "400":
+          description: Malformed request body
+          schema:
+            $ref: '#/definitions/model.SimpleMsg'
+        "500":
+          description: Infra creation failed
+          schema:
+            $ref: '#/definitions/model.SimpleMsg'
+      summary: Create a GPU Infra
+      tags:
+      - '[Infra] GPU VM Lifecycle'
   /ns/{nsId}/infra/{infraId}:
     delete:
       description: Terminate every node of the Infra and remove its records. Shared
@@ -69,6 +239,130 @@ paths:
           schema:
             $ref: '#/definitions/model.SimpleMsg'
       summary: Delete a GPU Infra
+      tags:
+      - '[Infra] GPU VM Lifecycle'
+    get:
+      description: Read one Infra. Use option=accessinfo for public IP, SSH port and
+        private key
+      operationId: GetInfra
+      parameters:
+      - default: default
+        description: Namespace ID
+        in: path
+        name: nsId
+        required: true
+        type: string
+      - description: Infra ID
+        in: path
+        name: infraId
+        required: true
+        type: string
+      - description: View to return
+        enum:
+        - status
+        - accessinfo
+        in: query
+        name: option
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Infra information
+          schema:
+            $ref: '#/definitions/tumblebug.InfraInfo'
+        "404":
+          description: Infra not found
+          schema:
+            $ref: '#/definitions/model.SimpleMsg'
+        "500":
+          description: Infra lookup failed
+          schema:
+            $ref: '#/definitions/model.SimpleMsg'
+      summary: Get a GPU Infra
+      tags:
+      - '[Infra] GPU VM Lifecycle'
+  /ns/{nsId}/infra/{infraId}/control:
+    post:
+      consumes:
+      - application/json
+      description: Apply suspend, resume, reboot or terminate to every node. Terminate
+        stops the nodes but keeps the records, so delete the Infra afterwards to stop
+        billing
+      operationId: PostInfraControl
+      parameters:
+      - default: default
+        description: Namespace ID
+        in: path
+        name: nsId
+        required: true
+        type: string
+      - description: Infra ID
+        in: path
+        name: infraId
+        required: true
+        type: string
+      - description: Lifecycle action
+        in: body
+        name: controlReq
+        required: true
+        schema:
+          $ref: '#/definitions/model.ControlInfraReq'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Action applied
+          schema:
+            $ref: '#/definitions/model.ControlInfraResp'
+        "400":
+          description: Unsupported action
+          schema:
+            $ref: '#/definitions/model.SimpleMsg'
+        "404":
+          description: Infra not found
+          schema:
+            $ref: '#/definitions/model.SimpleMsg'
+        "500":
+          description: Infra control failed
+          schema:
+            $ref: '#/definitions/model.SimpleMsg'
+      summary: Control a GPU Infra
+      tags:
+      - '[Infra] GPU VM Lifecycle'
+  /ns/{nsId}/infra/{infraId}/gpu:
+    get:
+      description: Run nvidia-smi on every node and return the reported GPU model,
+        memory and driver version
+      operationId: GetInfraGPU
+      parameters:
+      - default: default
+        description: Namespace ID
+        in: path
+        name: nsId
+        required: true
+        type: string
+      - description: Infra ID
+        in: path
+        name: infraId
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: GPU report per node
+          schema:
+            $ref: '#/definitions/tumblebug.CommandResults'
+        "404":
+          description: Infra not found
+          schema:
+            $ref: '#/definitions/model.SimpleMsg'
+        "500":
+          description: GPU report failed
+          schema:
+            $ref: '#/definitions/model.SimpleMsg'
+      summary: Report GPUs of an Infra
       tags:
       - '[Infra] GPU VM Lifecycle'
   /ns/{nsId}/shared-resources:

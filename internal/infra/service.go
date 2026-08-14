@@ -7,17 +7,19 @@ import (
 
 	"github.com/rs/zerolog/log"
 
+	"github.com/tryoo0607/gpu-vm-api/internal/config"
 	"github.com/tryoo0607/gpu-vm-api/internal/tumblebug"
 )
 
 // Service drives the GPU VM lifecycle through CB-Tumblebug.
 type Service struct {
-	client *tumblebug.Client
+	client   *tumblebug.Client
+	template config.TemplateConfig
 }
 
 // NewService builds a Service around a CB-Tumblebug client.
-func NewService(client *tumblebug.Client) *Service {
-	return &Service{client: client}
+func NewService(client *tumblebug.Client, template config.TemplateConfig) *Service {
+	return &Service{client: client, template: template}
 }
 
 // Delete terminates every node of an Infra and removes its records.

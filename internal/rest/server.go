@@ -8,6 +8,9 @@ import (
 
 	"github.com/labstack/echo/v4"
 	"github.com/labstack/echo/v4/middleware"
+	echoSwagger "github.com/swaggo/echo-swagger"
+
+	_ "github.com/tryoo0607/gpu-vm-api/api/docs"
 
 	"github.com/tryoo0607/gpu-vm-api/internal/config"
 	"github.com/tryoo0607/gpu-vm-api/internal/infra"
@@ -25,7 +28,7 @@ type Server struct {
 
 // NewServer builds the Echo instance and registers all routes.
 func NewServer(cfg *config.Config) *Server {
-	handler := NewHandler(infra.NewService(tumblebug.NewClient(cfg.Tumblebug)))
+	handler := NewHandler(infra.NewService(tumblebug.NewClient(cfg.Tumblebug), cfg.Template))
 
 	e := echo.New()
 	e.HideBanner = true
@@ -35,7 +38,13 @@ func NewServer(cfg *config.Config) *Server {
 
 	g := e.Group(BasePath)
 	g.GET("/readyz", RestGetReadyz)
+	g.GET("/api/*", echoSwagger.WrapHandler)
 	g.DELETE("/ns/:nsId/infra/:infraId", handler.RestDeleteInfra)
+	g.POST("/ns/:nsId/infra", handler.RestPostInfra)
+	g.GET("/ns/:nsId/infra", handler.RestGetAllInfra)
+	g.GET("/ns/:nsId/infra/:infraId", handler.RestGetInfra)
+	g.GET("/ns/:nsId/infra/:infraId/gpu", handler.RestGetInfraGPU)
+	g.POST("/ns/:nsId/infra/:infraId/control", handler.RestPostInfraControl)
 	g.DELETE("/ns/:nsId/shared-resources", handler.RestDeleteSharedResources)
 
 	return &Server{echo: e, port: cfg.Server.Port}
