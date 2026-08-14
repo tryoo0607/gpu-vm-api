@@ -93,3 +93,45 @@ type CommandResult struct {
 	Stderr  map[string]string `json:"stderr"`
 	Err     string            `json:"err"`
 }
+
+// InfraStatusView is the status view of an Infra.
+//
+// CB-Tumblebug wraps this under a "status" key when option=status is used, and
+// the shape differs from InfraInfo, so it needs its own type.
+type InfraStatusView struct {
+	ID           string          `json:"id"`
+	Name         string          `json:"name"`
+	Status       string          `json:"status"`
+	StatusCount  StatusCountInfo `json:"statusCount"`
+	TargetStatus string          `json:"targetStatus"`
+	TargetAction string          `json:"targetAction"`
+}
+
+// InfraAccessInfo is the access view of an Infra.
+//
+// The upstream struct carries no JSON tags on its outer fields, so the wire
+// format uses the exported Go names verbatim.
+type InfraAccessInfo struct {
+	InfraID    string                `json:"InfraId"`
+	NodeGroups []NodeGroupAccessInfo `json:"InfraNodeGroupAccessInfo"`
+}
+
+// NodeGroupAccessInfo is the access view of one NodeGroup.
+type NodeGroupAccessInfo struct {
+	NodeGroupID   string           `json:"NodeGroupId"`
+	BastionNodeID string           `json:"BastionNodeId,omitempty"`
+	Nodes         []NodeAccessInfo `json:"NodeAccessInfo"`
+}
+
+// NodeAccessInfo is how to reach one node.
+//
+// PrivateKey is only populated when the caller asks for it, and must never be
+// logged or persisted.
+type NodeAccessInfo struct {
+	NodeID       string `json:"nodeId"`
+	PublicIP     string `json:"publicIP"`
+	PrivateIP    string `json:"privateIP"`
+	SSHPort      int    `json:"sshPort"`
+	NodeUserName string `json:"nodeUserName,omitempty"`
+	PrivateKey   string `json:"privateKey,omitempty"`
+}

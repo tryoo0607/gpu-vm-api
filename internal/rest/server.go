@@ -43,6 +43,8 @@ func NewServer(cfg *config.Config) *Server {
 	g.POST("/ns/:nsId/infra", handler.RestPostInfra)
 	g.GET("/ns/:nsId/infra", handler.RestGetAllInfra)
 	g.GET("/ns/:nsId/infra/:infraId", handler.RestGetInfra)
+	g.GET("/ns/:nsId/infra/:infraId/status", handler.RestGetInfraStatus)
+	g.GET("/ns/:nsId/infra/:infraId/access", handler.RestGetInfraAccess)
 	g.GET("/ns/:nsId/infra/:infraId/gpu", handler.RestGetInfraGPU)
 	g.POST("/ns/:nsId/infra/:infraId/control", handler.RestPostInfraControl)
 	g.DELETE("/ns/:nsId/shared-resources", handler.RestDeleteSharedResources)

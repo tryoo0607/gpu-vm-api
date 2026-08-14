@@ -72,11 +72,29 @@ func selectNodeGroups(groups []tumblebug.NodeGroupDynamicReq, specID string) ([]
 	return selected, nil
 }
 
-// Get reads one Infra. Pass option "status" or "accessinfo" for the narrower views.
-func (s *Service) Get(ctx context.Context, nsID, infraID, option string) (*tumblebug.InfraInfo, error) {
-	result, err := s.client.GetInfra(ctx, nsID, infraID, option)
+// Get reads one Infra.
+func (s *Service) Get(ctx context.Context, nsID, infraID string) (*tumblebug.InfraInfo, error) {
+	result, err := s.client.GetInfra(ctx, nsID, infraID)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get infra: %w", err)
+	}
+	return result, nil
+}
+
+// Status reads the node status summary of an Infra.
+func (s *Service) Status(ctx context.Context, nsID, infraID string) (*tumblebug.InfraStatusView, error) {
+	result, err := s.client.GetInfraStatus(ctx, nsID, infraID)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get infra status: %w", err)
+	}
+	return result, nil
+}
+
+// AccessInfo reads how to reach the nodes of an Infra.
+func (s *Service) AccessInfo(ctx context.Context, nsID, infraID string, showSSHKey bool) (*tumblebug.InfraAccessInfo, error) {
+	result, err := s.client.GetInfraAccessInfo(ctx, nsID, infraID, showSSHKey)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get infra access info: %w", err)
 	}
 	return result, nil
 }

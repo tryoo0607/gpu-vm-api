@@ -53,22 +53,48 @@ func (c *Client) CreateInfraDynamic(ctx context.Context, nsID string, req *Infra
 	return result, nil
 }
 
-// GetInfra reads one Infra. Pass option "status" or "accessinfo" to change the view.
-func (c *Client) GetInfra(ctx context.Context, nsID, infraID, option string) (*InfraInfo, error) {
-	query := url.Values{}
-	if option != "" {
-		query.Set("option", option)
-	}
-	if option == OptionAccessInfo {
-		query.Set("accessInfoOption", accessInfoShowKey)
-	}
-	path := fmt.Sprintf("/ns/%s/infra/%s", url.PathEscape(nsID), url.PathEscape(infraID))
-
+// GetInfra reads one Infra.
+func (c *Client) GetInfra(ctx context.Context, nsID, infraID string) (*InfraInfo, error) {
 	result := &InfraInfo{}
-	if err := c.Do(ctx, http.MethodGet, path, query, nil, result); err != nil {
+	if err := c.Do(ctx, http.MethodGet, infraPath(nsID, infraID), nil, nil, result); err != nil {
 		return nil, fmt.Errorf("failed to get infra %q: %w", infraID, err)
 	}
 	return result, nil
+}
+
+// GetInfraStatus reads the status view of an Infra.
+//
+// The upstream response wraps the view under a "status" key, so it cannot be
+// decoded as an InfraInfo.
+func (c *Client) GetInfraStatus(ctx context.Context, nsID, infraID string) (*InfraStatusView, error) {
+	query := url.Values{"option": []string{OptionStatus}}
+
+	var wrapper struct {
+		Status InfraStatusView `json:"status"`
+	}
+	if err := c.Do(ctx, http.MethodGet, infraPath(nsID, infraID), query, nil, &wrapper); err != nil {
+		return nil, fmt.Errorf("failed to get status of infra %q: %w", infraID, err)
+	}
+	return &wrapper.Status, nil
+}
+
+// GetInfraAccessInfo reads how to reach the nodes of an Infra.
+// The SSH private key is only requested when showSSHKey is set.
+func (c *Client) GetInfraAccessInfo(ctx context.Context, nsID, infraID string, showSSHKey bool) (*InfraAccessInfo, error) {
+	query := url.Values{"option": []string{OptionAccessInfo}}
+	if showSSHKey {
+		query.Set("accessInfoOption", accessInfoShowKey)
+	}
+
+	result := &InfraAccessInfo{}
+	if err := c.Do(ctx, http.MethodGet, infraPath(nsID, infraID), query, nil, result); err != nil {
+		return nil, fmt.Errorf("failed to get access info of infra %q: %w", infraID, err)
+	}
+	return result, nil
+}
+
+func infraPath(nsID, infraID string) string {
+	return fmt.Sprintf("/ns/%s/infra/%s", url.PathEscape(nsID), url.PathEscape(infraID))
 }
 
 // ListInfra reads every Infra of a namespace with its status.
@@ -81,6 +107,10 @@ func (c *Client) ListInfra(ctx context.Context, nsID string) ([]InfraInfo, error
 	}
 	if err := c.Do(ctx, http.MethodGet, path, query, nil, &result); err != nil {
 		return nil, fmt.Errorf("failed to list infra in namespace %q: %w", nsID, err)
+	}
+	if result.Infra == nil {
+		// An empty namespace must serialize as [], not null.
+		return []InfraInfo{}, nil
 	}
 	return result.Infra, nil
 }

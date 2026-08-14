@@ -107,7 +107,7 @@
         },
         "/ns/{nsId}/infra/{infraId}": {
             "get": {
-                "description": "Read one Infra. Use option=accessinfo for public IP, SSH port and private key",
+                "description": "Read one Infra with its nodes",
                 "produces": [
                     "application/json"
                 ],
@@ -131,16 +131,6 @@
                         "name": "infraId",
                         "in": "path",
                         "required": true
-                    },
-                    {
-                        "enum": [
-                            "status",
-                            "accessinfo"
-                        ],
-                        "type": "string",
-                        "description": "View to return",
-                        "name": "option",
-                        "in": "query"
                     }
                 ],
                 "responses": {
@@ -206,6 +196,63 @@
                     },
                     "500": {
                         "description": "Infra deletion failed",
+                        "schema": {
+                            "$ref": "#/definitions/model.SimpleMsg"
+                        }
+                    }
+                }
+            }
+        },
+        "/ns/{nsId}/infra/{infraId}/access": {
+            "get": {
+                "description": "Report public IP, SSH port and login user per node. The SSH private key is returned only when showSshKey is true",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "[Infra] GPU VM Lifecycle"
+                ],
+                "summary": "Get access information of a GPU Infra",
+                "operationId": "GetInfraAccess",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "default": "default",
+                        "description": "Namespace ID",
+                        "name": "nsId",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Infra ID",
+                        "name": "infraId",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "boolean",
+                        "default": false,
+                        "description": "Include the SSH private key",
+                        "name": "showSshKey",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Access information",
+                        "schema": {
+                            "$ref": "#/definitions/tumblebug.InfraAccessInfo"
+                        }
+                    },
+                    "404": {
+                        "description": "Infra not found",
+                        "schema": {
+                            "$ref": "#/definitions/model.SimpleMsg"
+                        }
+                    },
+                    "500": {
+                        "description": "Access information lookup failed",
                         "schema": {
                             "$ref": "#/definitions/model.SimpleMsg"
                         }
@@ -324,6 +371,56 @@
                     },
                     "500": {
                         "description": "GPU report failed",
+                        "schema": {
+                            "$ref": "#/definitions/model.SimpleMsg"
+                        }
+                    }
+                }
+            }
+        },
+        "/ns/{nsId}/infra/{infraId}/status": {
+            "get": {
+                "description": "Report the node status summary, suitable for polling while an Infra is being created",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "[Infra] GPU VM Lifecycle"
+                ],
+                "summary": "Get the status of a GPU Infra",
+                "operationId": "GetInfraStatus",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "default": "default",
+                        "description": "Namespace ID",
+                        "name": "nsId",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Infra ID",
+                        "name": "infraId",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Infra status",
+                        "schema": {
+                            "$ref": "#/definitions/tumblebug.InfraStatusView"
+                        }
+                    },
+                    "404": {
+                        "description": "Infra not found",
+                        "schema": {
+                            "$ref": "#/definitions/model.SimpleMsg"
+                        }
+                    },
+                    "500": {
+                        "description": "Infra status lookup failed",
                         "schema": {
                             "$ref": "#/definitions/model.SimpleMsg"
                         }
@@ -522,6 +619,20 @@
                 }
             }
         },
+        "tumblebug.InfraAccessInfo": {
+            "type": "object",
+            "properties": {
+                "InfraId": {
+                    "type": "string"
+                },
+                "InfraNodeGroupAccessInfo": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/tumblebug.NodeGroupAccessInfo"
+                    }
+                }
+            }
+        },
         "tumblebug.InfraInfo": {
             "type": "object",
             "properties": {
@@ -547,6 +658,69 @@
                     "$ref": "#/definitions/tumblebug.StatusCountInfo"
                 },
                 "targetStatus": {
+                    "type": "string"
+                }
+            }
+        },
+        "tumblebug.InfraStatusView": {
+            "type": "object",
+            "properties": {
+                "id": {
+                    "type": "string"
+                },
+                "name": {
+                    "type": "string"
+                },
+                "status": {
+                    "type": "string"
+                },
+                "statusCount": {
+                    "$ref": "#/definitions/tumblebug.StatusCountInfo"
+                },
+                "targetAction": {
+                    "type": "string"
+                },
+                "targetStatus": {
+                    "type": "string"
+                }
+            }
+        },
+        "tumblebug.NodeAccessInfo": {
+            "type": "object",
+            "properties": {
+                "nodeId": {
+                    "type": "string"
+                },
+                "nodeUserName": {
+                    "type": "string"
+                },
+                "privateIP": {
+                    "type": "string"
+                },
+                "privateKey": {
+                    "type": "string"
+                },
+                "publicIP": {
+                    "type": "string"
+                },
+                "sshPort": {
+                    "type": "integer"
+                }
+            }
+        },
+        "tumblebug.NodeGroupAccessInfo": {
+            "type": "object",
+            "properties": {
+                "BastionNodeId": {
+                    "type": "string"
+                },
+                "NodeAccessInfo": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/tumblebug.NodeAccessInfo"
+                    }
+                },
+                "NodeGroupId": {
                     "type": "string"
                 }
             }

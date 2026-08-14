@@ -83,6 +83,15 @@ definitions:
           $ref: '#/definitions/tumblebug.CommandResult'
         type: array
     type: object
+  tumblebug.InfraAccessInfo:
+    properties:
+      InfraId:
+        type: string
+      InfraNodeGroupAccessInfo:
+        items:
+          $ref: '#/definitions/tumblebug.NodeGroupAccessInfo'
+        type: array
+    type: object
   tumblebug.InfraInfo:
     properties:
       description:
@@ -100,6 +109,47 @@ definitions:
       statusCount:
         $ref: '#/definitions/tumblebug.StatusCountInfo'
       targetStatus:
+        type: string
+    type: object
+  tumblebug.InfraStatusView:
+    properties:
+      id:
+        type: string
+      name:
+        type: string
+      status:
+        type: string
+      statusCount:
+        $ref: '#/definitions/tumblebug.StatusCountInfo'
+      targetAction:
+        type: string
+      targetStatus:
+        type: string
+    type: object
+  tumblebug.NodeAccessInfo:
+    properties:
+      nodeId:
+        type: string
+      nodeUserName:
+        type: string
+      privateIP:
+        type: string
+      privateKey:
+        type: string
+      publicIP:
+        type: string
+      sshPort:
+        type: integer
+    type: object
+  tumblebug.NodeGroupAccessInfo:
+    properties:
+      BastionNodeId:
+        type: string
+      NodeAccessInfo:
+        items:
+          $ref: '#/definitions/tumblebug.NodeAccessInfo'
+        type: array
+      NodeGroupId:
         type: string
     type: object
   tumblebug.NodeInfo:
@@ -242,8 +292,7 @@ paths:
       tags:
       - '[Infra] GPU VM Lifecycle'
     get:
-      description: Read one Infra. Use option=accessinfo for public IP, SSH port and
-        private key
+      description: Read one Infra with its nodes
       operationId: GetInfra
       parameters:
       - default: default
@@ -256,13 +305,6 @@ paths:
         in: path
         name: infraId
         required: true
-        type: string
-      - description: View to return
-        enum:
-        - status
-        - accessinfo
-        in: query
-        name: option
         type: string
       produces:
       - application/json
@@ -280,6 +322,46 @@ paths:
           schema:
             $ref: '#/definitions/model.SimpleMsg'
       summary: Get a GPU Infra
+      tags:
+      - '[Infra] GPU VM Lifecycle'
+  /ns/{nsId}/infra/{infraId}/access:
+    get:
+      description: Report public IP, SSH port and login user per node. The SSH private
+        key is returned only when showSshKey is true
+      operationId: GetInfraAccess
+      parameters:
+      - default: default
+        description: Namespace ID
+        in: path
+        name: nsId
+        required: true
+        type: string
+      - description: Infra ID
+        in: path
+        name: infraId
+        required: true
+        type: string
+      - default: false
+        description: Include the SSH private key
+        in: query
+        name: showSshKey
+        type: boolean
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Access information
+          schema:
+            $ref: '#/definitions/tumblebug.InfraAccessInfo'
+        "404":
+          description: Infra not found
+          schema:
+            $ref: '#/definitions/model.SimpleMsg'
+        "500":
+          description: Access information lookup failed
+          schema:
+            $ref: '#/definitions/model.SimpleMsg'
+      summary: Get access information of a GPU Infra
       tags:
       - '[Infra] GPU VM Lifecycle'
   /ns/{nsId}/infra/{infraId}/control:
@@ -363,6 +445,41 @@ paths:
           schema:
             $ref: '#/definitions/model.SimpleMsg'
       summary: Report GPUs of an Infra
+      tags:
+      - '[Infra] GPU VM Lifecycle'
+  /ns/{nsId}/infra/{infraId}/status:
+    get:
+      description: Report the node status summary, suitable for polling while an Infra
+        is being created
+      operationId: GetInfraStatus
+      parameters:
+      - default: default
+        description: Namespace ID
+        in: path
+        name: nsId
+        required: true
+        type: string
+      - description: Infra ID
+        in: path
+        name: infraId
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Infra status
+          schema:
+            $ref: '#/definitions/tumblebug.InfraStatusView'
+        "404":
+          description: Infra not found
+          schema:
+            $ref: '#/definitions/model.SimpleMsg'
+        "500":
+          description: Infra status lookup failed
+          schema:
+            $ref: '#/definitions/model.SimpleMsg'
+      summary: Get the status of a GPU Infra
       tags:
       - '[Infra] GPU VM Lifecycle'
   /ns/{nsId}/shared-resources:

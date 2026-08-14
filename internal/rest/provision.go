@@ -2,6 +2,7 @@ package rest
 
 import (
 	"net/http"
+	"strings"
 
 	"github.com/labstack/echo/v4"
 	"github.com/rs/zerolog/log"
@@ -78,12 +79,11 @@ func (h *Handler) RestGetAllInfra(c echo.Context) error {
 // RestGetInfra godoc
 // @ID GetInfra
 // @Summary Get a GPU Infra
-// @Description Read one Infra. Use option=accessinfo for public IP, SSH port and private key
+// @Description Read one Infra with its nodes
 // @Tags [Infra] GPU VM Lifecycle
 // @Produce json
 // @Param nsId path string true "Namespace ID" default(default)
 // @Param infraId path string true "Infra ID"
-// @Param option query string false "View to return" Enums(status,accessinfo)
 // @Success 200 {object} tumblebug.InfraInfo "Infra information"
 // @Failure 404 {object} model.SimpleMsg "Infra not found"
 // @Failure 500 {object} model.SimpleMsg "Infra lookup failed"
@@ -93,10 +93,62 @@ func (h *Handler) RestGetInfra(c echo.Context) error {
 	nsID := c.Param("nsId")
 	infraID := c.Param("infraId")
 
-	result, err := h.infra.Get(ctx, nsID, infraID, c.QueryParam("option"))
+	result, err := h.infra.Get(ctx, nsID, infraID)
 	if err != nil {
 		log.Error().Err(err).Str("nsId", nsID).Str("infraId", infraID).Msg("Failed to get infra")
 		return c.JSON(statusCodeFor(err), model.SimpleMsg{Message: "Infra lookup failed"})
+	}
+	return c.JSON(http.StatusOK, result)
+}
+
+// RestGetInfraStatus godoc
+// @ID GetInfraStatus
+// @Summary Get the status of a GPU Infra
+// @Description Report the node status summary, suitable for polling while an Infra is being created
+// @Tags [Infra] GPU VM Lifecycle
+// @Produce json
+// @Param nsId path string true "Namespace ID" default(default)
+// @Param infraId path string true "Infra ID"
+// @Success 200 {object} tumblebug.InfraStatusView "Infra status"
+// @Failure 404 {object} model.SimpleMsg "Infra not found"
+// @Failure 500 {object} model.SimpleMsg "Infra status lookup failed"
+// @Router /ns/{nsId}/infra/{infraId}/status [get]
+func (h *Handler) RestGetInfraStatus(c echo.Context) error {
+	ctx := c.Request().Context()
+	nsID := c.Param("nsId")
+	infraID := c.Param("infraId")
+
+	result, err := h.infra.Status(ctx, nsID, infraID)
+	if err != nil {
+		log.Error().Err(err).Str("nsId", nsID).Str("infraId", infraID).Msg("Failed to get infra status")
+		return c.JSON(statusCodeFor(err), model.SimpleMsg{Message: "Infra status lookup failed"})
+	}
+	return c.JSON(http.StatusOK, result)
+}
+
+// RestGetInfraAccess godoc
+// @ID GetInfraAccess
+// @Summary Get access information of a GPU Infra
+// @Description Report public IP, SSH port and login user per node. The SSH private key is returned only when showSshKey is true
+// @Tags [Infra] GPU VM Lifecycle
+// @Produce json
+// @Param nsId path string true "Namespace ID" default(default)
+// @Param infraId path string true "Infra ID"
+// @Param showSshKey query bool false "Include the SSH private key" default(false)
+// @Success 200 {object} tumblebug.InfraAccessInfo "Access information"
+// @Failure 404 {object} model.SimpleMsg "Infra not found"
+// @Failure 500 {object} model.SimpleMsg "Access information lookup failed"
+// @Router /ns/{nsId}/infra/{infraId}/access [get]
+func (h *Handler) RestGetInfraAccess(c echo.Context) error {
+	ctx := c.Request().Context()
+	nsID := c.Param("nsId")
+	infraID := c.Param("infraId")
+	showSSHKey := strings.EqualFold(c.QueryParam("showSshKey"), "true")
+
+	result, err := h.infra.AccessInfo(ctx, nsID, infraID, showSSHKey)
+	if err != nil {
+		log.Error().Err(err).Str("nsId", nsID).Str("infraId", infraID).Msg("Failed to get access info")
+		return c.JSON(statusCodeFor(err), model.SimpleMsg{Message: "Access information lookup failed"})
 	}
 	return c.JSON(http.StatusOK, result)
 }
