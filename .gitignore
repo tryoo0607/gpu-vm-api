@@ -1,0 +1,26 @@
+# Binaries
+bin/
+*.exe
+*.dll
+*.so
+*.dylib
+
+# Test & coverage
+*.test
+*.out
+coverage.*
+
+# Go workspace
+go.work
+go.work.sum
+
+# Env & credentials
+.env
+*.pem
+*.key
+
+# Editor / OS
+.idea/
+.vscode/
+*.swp
+.DS_Store
