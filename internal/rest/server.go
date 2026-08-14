@@ -10,6 +10,8 @@ import (
 	"github.com/labstack/echo/v4/middleware"
 
 	"github.com/tryoo0607/gpu-vm-api/internal/config"
+	"github.com/tryoo0607/gpu-vm-api/internal/infra"
+	"github.com/tryoo0607/gpu-vm-api/internal/tumblebug"
 )
 
 // BasePath is the mount point for every route of this service.
@@ -23,6 +25,8 @@ type Server struct {
 
 // NewServer builds the Echo instance and registers all routes.
 func NewServer(cfg *config.Config) *Server {
+	handler := NewHandler(infra.NewService(tumblebug.NewClient(cfg.Tumblebug)))
+
 	e := echo.New()
 	e.HideBanner = true
 	e.HidePort = true
@@ -31,6 +35,8 @@ func NewServer(cfg *config.Config) *Server {
 
 	g := e.Group(BasePath)
 	g.GET("/readyz", RestGetReadyz)
+	g.DELETE("/ns/:nsId/infra/:infraId", handler.RestDeleteInfra)
+	g.DELETE("/ns/:nsId/shared-resources", handler.RestDeleteSharedResources)
 
 	return &Server{echo: e, port: cfg.Server.Port}
 }

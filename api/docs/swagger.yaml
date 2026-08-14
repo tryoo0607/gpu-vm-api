@@ -1,5 +1,26 @@
 basePath: /gpuvm
 definitions:
+  model.DeleteInfraResp:
+    properties:
+      deleted:
+        items:
+          type: string
+        type: array
+    type: object
+  model.ReleaseSharedResourcesResp:
+    properties:
+      released:
+        items:
+          $ref: '#/definitions/model.ResourceResult'
+        type: array
+    type: object
+  model.ResourceResult:
+    properties:
+      id:
+        type: string
+      message:
+        type: string
+    type: object
   model.SimpleMsg:
     properties:
       message:
@@ -15,6 +36,68 @@ info:
   title: GPU VM API
   version: 0.1.0
 paths:
+  /ns/{nsId}/infra/{infraId}:
+    delete:
+      description: Terminate every node of the Infra and remove its records. Shared
+        resources are kept; release them separately once the namespace holds no Infra
+      operationId: DeleteInfra
+      parameters:
+      - default: default
+        description: Namespace ID
+        in: path
+        name: nsId
+        required: true
+        type: string
+      - description: Infra ID
+        in: path
+        name: infraId
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Infra deleted
+          schema:
+            $ref: '#/definitions/model.DeleteInfraResp'
+        "404":
+          description: Infra not found
+          schema:
+            $ref: '#/definitions/model.SimpleMsg'
+        "500":
+          description: Infra deletion failed
+          schema:
+            $ref: '#/definitions/model.SimpleMsg'
+      summary: Delete a GPU Infra
+      tags:
+      - '[Infra] GPU VM Lifecycle'
+  /ns/{nsId}/shared-resources:
+    delete:
+      description: 'Delete the shared vNet, security group and SSH key of the namespace.
+        Delete every Infra first: CB-Tumblebug does not cascade and the CSP rejects
+        dependent resources'
+      operationId: DeleteSharedResources
+      parameters:
+      - default: default
+        description: Namespace ID
+        in: path
+        name: nsId
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Shared resources released
+          schema:
+            $ref: '#/definitions/model.ReleaseSharedResourcesResp'
+        "500":
+          description: Shared resource release failed
+          schema:
+            $ref: '#/definitions/model.SimpleMsg'
+      summary: Release shared resources
+      tags:
+      - '[Infra] GPU VM Lifecycle'
   /readyz:
     get:
       description: Report whether the service finished initialization and can accept

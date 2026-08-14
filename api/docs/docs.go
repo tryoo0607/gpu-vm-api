@@ -19,6 +19,93 @@ const docTemplate = `{
     "host": "{{.Host}}",
     "basePath": "{{.BasePath}}",
     "paths": {
+        "/ns/{nsId}/infra/{infraId}": {
+            "delete": {
+                "description": "Terminate every node of the Infra and remove its records. Shared resources are kept; release them separately once the namespace holds no Infra",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "[Infra] GPU VM Lifecycle"
+                ],
+                "summary": "Delete a GPU Infra",
+                "operationId": "DeleteInfra",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "default": "default",
+                        "description": "Namespace ID",
+                        "name": "nsId",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Infra ID",
+                        "name": "infraId",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Infra deleted",
+                        "schema": {
+                            "$ref": "#/definitions/model.DeleteInfraResp"
+                        }
+                    },
+                    "404": {
+                        "description": "Infra not found",
+                        "schema": {
+                            "$ref": "#/definitions/model.SimpleMsg"
+                        }
+                    },
+                    "500": {
+                        "description": "Infra deletion failed",
+                        "schema": {
+                            "$ref": "#/definitions/model.SimpleMsg"
+                        }
+                    }
+                }
+            }
+        },
+        "/ns/{nsId}/shared-resources": {
+            "delete": {
+                "description": "Delete the shared vNet, security group and SSH key of the namespace. Delete every Infra first: CB-Tumblebug does not cascade and the CSP rejects dependent resources",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "[Infra] GPU VM Lifecycle"
+                ],
+                "summary": "Release shared resources",
+                "operationId": "DeleteSharedResources",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "default": "default",
+                        "description": "Namespace ID",
+                        "name": "nsId",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Shared resources released",
+                        "schema": {
+                            "$ref": "#/definitions/model.ReleaseSharedResourcesResp"
+                        }
+                    },
+                    "500": {
+                        "description": "Shared resource release failed",
+                        "schema": {
+                            "$ref": "#/definitions/model.SimpleMsg"
+                        }
+                    }
+                }
+            }
+        },
         "/readyz": {
             "get": {
                 "description": "Report whether the service finished initialization and can accept traffic",
@@ -48,6 +135,39 @@ const docTemplate = `{
         }
     },
     "definitions": {
+        "model.DeleteInfraResp": {
+            "type": "object",
+            "properties": {
+                "deleted": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                }
+            }
+        },
+        "model.ReleaseSharedResourcesResp": {
+            "type": "object",
+            "properties": {
+                "released": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/model.ResourceResult"
+                    }
+                }
+            }
+        },
+        "model.ResourceResult": {
+            "type": "object",
+            "properties": {
+                "id": {
+                    "type": "string"
+                },
+                "message": {
+                    "type": "string"
+                }
+            }
+        },
         "model.SimpleMsg": {
             "type": "object",
             "properties": {
